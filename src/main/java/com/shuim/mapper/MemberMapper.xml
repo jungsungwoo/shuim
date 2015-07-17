@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.shuim.service.MemberMapper">
+	
+	<insert id="addMember">
+		INSERT INTO member (`email`, `passwd`, `name`, `mobile`, `birthday`, `gender`, `nick`) 
+		VALUES (
+			#{email}
+			, #{passwd}
+			, #{name}
+			, #{mobile}
+			, #{birthday}
+			, #{gender}
+			, #{nick}							
+			)	
+	</insert>
+	
+	<update id="updatePasswd">
+		UPDATE member 
+			SET `passwd`=#{passwd}
+		WHERE email = #{email}
+	</update>
+	
+	<update id="updateUserInfo">
+		UPDATE member SET
+		 `mobile`=#{mobile}
+		 ,`birthday`=#{birthday}
+		 ,`gender`=#{gender}	 
+		 ,`nick`=#{nick}		 
+		WHERE email = #{email}	
+	</update>	
+	
+	<update id="updateDrew">
+		UPDATE member SET
+		 `email`='',
+		 `passwd`='',
+		 `mobile`='',
+		 `birthday`='',
+		 `gender`='',
+		 `nick`='',
+		 `last_login`='',
+		 `login_count`='0',
+		 `state`='2',
+		 `drop_date`=#{drop_date},
+		 `drop_reason`=#{drop_reason}
+		WHERE seq = #{seq}		
+	</update>
+	
+	<update id="updateUserLoginLog" parameterType="String">
+		UPDATE member SET
+		`last_login`= NOW()
+		WHERE email = #{email}	
+	</update>
+	
+	
+	<select id="checkMember" parameterType="HashMap" resultType="HashMap">
+		SELECT * FROM member
+		WHERE email = #{email} and passwd = #{passwd} 
+	</select>
+	
+	<select id="selectMember" parameterType="String" resultType="HashMap">
+		SELECT * FROM member
+		WHERE email = #{email}
+	</select>	
+	
+	<select id="duplicateMember" parameterType="String" resultType="String">
+		SELECT count(*) FROM member
+		WHERE email = #{email} 
+	</select>
+	
+	<select id="duplicateNick" parameterType="String" resultType="String">
+		SELECT count(*) FROM member
+		WHERE nick = #{nick} 
+	</select>
+		
+	
+	<select id="findEmailMember"  parameterType="com.shuim.domain.MemberVo" resultType="String">
+		SELECT email FROM member
+		WHERE name = #{name} and mobile = #{mobile} and birthday = #{birthday}		
+	</select>
+	
+	<select id="findPasswdConfirm" parameterType="HashMap" resultType="String">
+		SELECT count(*) FROM member
+		WHERE name = #{name} and email = #{email} and mobile = #{mobile} and birthday = #{birthday}	 and gender = #{gender}	
+	</select>
+	
+ </mapper>

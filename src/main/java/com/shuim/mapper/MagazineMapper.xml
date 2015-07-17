@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shuim.service.MagazineMapper">
+
+	<!-- 컨텐츠 리스트 -->
+	<select id="select" parameterType="hashmap" resultType="com.shuim.domain.MagazineVo">
+	SELECT @RNUM := @RNUM + 1 AS ROWNUM, t.* FROM
+    (
+		 SELECT * FROM magazine   
+		) t,
+	 ( SELECT @RNUM := 0 ) R
+	 limit ${startRow}, ${pageSize}	    
+	</select>
+
+
+	<!-- 컨텐츠 리스트 -->
+	<select id="getSelectJson" parameterType="hashmap" resultType="hashmap">
+	 SELECT idx, content_id, user_name, subject FROM magazine 
+    <where>	    
+    AND state = '게시'
+   </where>	 
+     <if test="array == ''">
+     	ORDER BY reg_date DESC
+     </if>	   
+     <if test="array == 'date'">
+     	ORDER BY reg_date DESC
+     </if>	
+     <if test="array == 'hits'">
+     	ORDER BY read_count DESC
+     </if>
+     <if test="array == 'cnt'">
+     	ORDER BY cnt, reg_date DESC
+     </if>   
+	</select>
+
+	<select id="getSelectJsonView"  parameterType="String" resultType="hashmap">
+        SELECT  idx, content_id, user_name, subject FROM magazine WHERE idx = #{idx}
+	</select>
+
+	<select id="getSelectXMLView"  parameterType="String" resultType="com.shuim.domain.MagazineVo">
+        SELECT  * FROM magazine WHERE idx = #{idx}
+	</select>
+
+
+
+	<delete id="deleteContent" parameterType="String">
+		DELETE FROM magazine
+		WHERE idx = #{idx}
+	</delete>
+
+     <!-- 컨텐츠 생성 -->
+    <insert id="postContent">
+         INSERT INTO magazine (`content_id`,`user_name`, `subject`, `detail`, `classification`, `state`, `origin`, `categorize`, `thumbnailFileName` ) VALUES (
+              #{content_id}
+              , #{user_name}
+              , #{subject}
+              , #{detail}
+              , #{classification}           
+              , #{state}
+              , #{origin}
+              , #{categorize}
+              , #{thumbnailFileName}
+         )
+    </insert>
+
+	<!-- 컨텐츠 업데이트 -->
+    <update id="putContent">
+         UPDATE magazine
+         <set>
+         	  <if test="subject != null">
+              subject = #{subject},
+              </if> 
+              <if test="detail != null">
+              detail = #{detail},
+              </if>
+              <if test="classification != null">
+              classification = #{classification},
+              </if>
+              <if test="origin != null">
+              origin = #{origin},  
+              </if>  
+              <if test="state != null">
+              state = #{state}, 
+              </if> 
+	 	      <if test="thumbnailFileName != null">
+				thumbnailFileName = #{thumbnailFileName},	 	    
+		      </if>              
+		      <if test="categorize != null">
+              categorize = #{categorize}
+              </if>
+         </set>
+         WHERE idx = #{idx} LIMIT 1
+    </update>
+
+
+	<!-- 모든 컨텐츠 수 -->
+	<select id="selectCnt" resultType="String">
+	    SELECT  count(*) AS selectCnt FROM magazine
+	    <where>	    
+	    AND state = '게시'
+        <if test="searchWord != ''">
+        	AND detail LIKE '%${searchWord}%'
+        </if>
+        <choose>
+	        <when test='categorize == ""'></when>
+	        <when test='categorize == "A"'>
+	        AND categorize = '뉴스'
+	        </when>
+	        <when test='categorize == "B"'>
+	        AND categorize = '중고차시승기'
+	        </when>
+	        <when test='categorize == "C"'>
+	        AND categorize = '중고차 TIP'
+	        </when>
+	        <when test='categorize == "D"'>
+	        AND categorize = '칼럼'
+	        </when>
+        </choose>                                      	
+	   </where>	 
+	</select>
+    
+    <!-- 조회수 업데이트 -->
+    <update id="updateReadCount">
+		UPDATE magazine SET read_count = IFNULL(read_count,0) + 1 
+		WHERE idx = #{idx} LIMIT 1
+	</update>
+	
+	<!-- 컨텐츠 상세정보 -->
+	<select id="selectOneWrite" resultType="com.shuim.domain.MagazineVo">
+        SELECT  * FROM magazine WHERE idx = #{idx}
+    </select>
+    
+    <!-- 댓글 리스트 -->
+	<select id="selectComment" parameterType="hashmap" resultType="com.shuim.domain.MagazineCommentVo">
+	SELECT @RNUM := @RNUM + 1 AS ROWNUM, t.* FROM
+    (
+	    SELECT  comment_idx, idx, grp, comment, nick, reg_date,
+		(SELECT COUNT(sympathy) FROM comment_repute p WHERE p.comment_idx=m.comment_idx and p.sympathy='Y') reputeY, 
+		(SELECT COUNT(sympathy) FROM comment_repute p WHERE p.comment_idx=m.comment_idx and p.sympathy='N') reputeN,  
+		notify,state, mobileRefer   FROM comment_magazine m 
+	    <where>
+	    	 idx = #{idx} and state='게시'
+	    </where>	    
+		) t,
+	 ( SELECT @RNUM := 0 ) R
+	 ORDER BY ROWNUM DESC, grp DESC
+	 limit ${startRow}, ${pageSize}	    
+	</select>
+	
+    <!-- 댓글 총 갯수 -->
+    <select id="selectCommentCnt" resultType="String">
+	    SELECT  count(*) AS selectCnt FROM comment_magazine
+	    WHERE state='게시' AND idx = #{idx}
+	</select>
+	
+	<!-- 댓글 등록 -->
+	<insert id="insertComment">
+		insert into comment_magazine select null, #{content_id}, #{idx}, ifnull(max(grp)+1,1) grp, #{email}, #{comment}, #{nick}, now(), 0, '게시', #{ip}, 'N' 
+		from comment_magazine where idx = #{idx}
+	</insert>    
+
+
+	<!-- 연관 컨텐츠 8개 -->
+	<select id="selectAddContents" parameterType="hashmap" resultType="com.shuim.domain.MagazineVo">
+		SELECT @RNUM := @RNUM + 1 AS ROWNUM, t.* FROM 
+		(
+			 SELECT idx, content_id, user_name, subject, 
+				detail, classification, replace(left(reg_date,10), '-', '.') AS reg_date, read_count, thumbnailFileName, 
+				state, main_view, categorize FROM magazine WHERE state='게시' 
+				) t, (
+			 SELECT @RNUM := 0 
+			   ) R 
+		WHERE idx > #{idx}
+		ORDER BY ROWNUM DESC, idx DESC
+		limit 0, 8	
+	</select>	
+	
+	<select id="getSelectComment_repute" parameterType="hashmap" resultType="hashmap">
+	SELECT * FROM comment_repute
+	WHERE comment_idx=${comment_idx} and sympathy='${sympathy}' and email='${email}'
+	</select>
+	
+	<insert id="insertSympathy">
+		INSERT INTO comment_repute (`idx`, `comment_idx`, `email`, `sympathy`) VALUES (
+			'${idx}'
+			, '${comment_idx}'
+			, '${email}'
+			, '${sympathy}'
+			)	
+	</insert>
+
+	<select id="getSelectComment_notify" parameterType="hashmap" resultType="String">
+	SELECT notify FROM comment_magazine
+	WHERE idx = #{idx} and comment_idx=${comment_idx} and state='게시'
+	</select>
+
+	<!-- 신고하기 -->
+	<update id="updateNotify">
+		UPDATE comment_magazine SET notify = IFNULL(notify,0) + 1 
+		WHERE comment_idx = #{comment_idx} LIMIT 1
+	</update>
+	    	 
+
+</mapper>

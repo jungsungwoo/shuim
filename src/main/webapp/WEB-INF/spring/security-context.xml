@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans
+     xmlns="http://www.springframework.org/schema/security"
+     xmlns:beans="http://www.springframework.org/schema/beans"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="
+     http://www.springframework.org/schema/beans
+     http://www.springframework.org/schema/beans/spring-beans.xsd
+     http://www.springframework.org/schema/security
+     http://www.springframework.org/schema/security/spring-security.xsd
+     ">
+
+	<http pattern="/resources/**" security="none"/>
+
+    <http auto-config='true'>
+
+        <intercept-url pattern="/mypage/**" access="ROLE_USER" />
+        
+        <form-login login-page="/member/login.car"
+                    username-parameter="email"
+                    password-parameter="passwd"    
+                    login-processing-url="/loginProcess"
+                    authentication-success-handler-ref="signinSuccessHandler"
+                    authentication-failure-url="/member/login.car?fail=true"
+                    />        
+        <logout
+        invalidate-session="true"
+			logout-url="/logout.car"
+			logout-success-url="/"
+        />            
+        <session-management>
+            <concurrency-control max-sessions="10" expired-url="/member/login_duplicate.car"/>
+        </session-management>    </http>
+     
+    <authentication-manager>
+        <authentication-provider ref="memberAuthenticationProvider"/>
+    </authentication-manager> 
+     
+    <beans:bean id="signinSuccessHandler" class="com.shuim.service.SigninSuccessHandler" >
+	    <beans:property name="targetUrlParameter" value="loginRedirect" />	
+	    <beans:property name="useReferer" value="true" />	
+	    <beans:property name="defaultUrl" value="/" />    
+    </beans:bean>
+    
+    <beans:bean id="memberAuthenticationProvider" class="com.shuim.service.MemberAuthenticationProvider"/>     
+
+	<!-- 비밀번호 암호화 -->
+    <beans:bean class="org.springframework.security.authentication.encoding.ShaPasswordEncoder" id="passwordEncoder" />
+    
+</beans:beans>
